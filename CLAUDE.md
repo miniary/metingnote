@@ -25,3 +25,18 @@
 - 음성 받아쓰기는 Gemini API (`gemini-3.1-flash-lite`)
 - 모든 API 경로는 `/api/` 접두사를 붙인다
 - 테스트는 pytest 로 한다
+
+# 문서 (docs/)
+
+작업 전에 아래 순서로 읽는다: `00` > `01` > `02` > `03` > `04` > `05`
+
+| 파일 | 내용 |
+|---|---|
+| `docs/00-overview.md` | 전체 안내 · 문서 지도 · 화면 4종 · 디자인 방향 |
+| `docs/01-product.md` | 제품 정의 |
+| `docs/02-specs.md` | 기능 명세 (API · 데이터) |
+| `docs/03-design.md` | 화면 설계 (`docs/화면구성.pdf` 를 가리킨다) |
+| `docs/04-tasks.md` | 작업 계획 |
+| `docs/05-conventions.md` | 코드 규칙 |
+
+- 화면 배치 · 요소 이름 · `id` 는 `docs/화면구성.pdf` 를 따른다. `id` 는 바꾸지 않는다
