@@ -1,0 +1,20 @@
+# 비밀 값 (API 키) — 예시 파일만 커밋
+.env
+.env.*
+!.env.example
+
+# 의존성
+node_modules/
+
+# 저장된 회의록 데이터
+data/
+
+# 기타
+*.log
+.DS_Store
+Thumbs.db
+.playwright-mcp/
+.tmp/
+
+# 투두가드 실행 기록 (세션마다 바뀜)
+.claude/todo-guard/
