@@ -1,0 +1,9 @@
+# 사전 승인 8개 (docs/03-design.md). 이 목록 밖은 추가하지 않는다
+fastapi==0.162.5
+uvicorn==0.54.0
+sqlalchemy==2.1.8
+pytest==9.2.0
+httpx==0.28.1
+google-genai==3.2.0
+python-multipart==0.0.33
+python-dotenv==1.2.4

@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MeetingNote</title>
+  <!-- 파일은 2개만 두므로 favicon 요청(404)을 빈 아이콘으로 막는다 -->
+  <link rel="icon" href="data:,">
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    // 다크 모드는 <html> 의 dark 클래스로 켠다
+    tailwind.config = { darkMode: 'class' };
+
+    // 화면이 그려지기 전에 테마를 정해 깜빡임을 막는다. 저장값이 없으면 OS 설정을 따른다 (토글은 app.js)
+    (function applyInitialTheme() {
+      let saved = null;
+      try {
+        saved = localStorage.getItem('meetingnote-theme');
+      } catch (err) {
+        // 저장소를 못 쓰는 환경이면 OS 설정만 따른다
+      }
+      const dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.classList.toggle('dark', dark);
+    })();
+  </script>
+</head>
+<body class="min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-100 to-slate-200 font-sans text-slate-800 antialiased dark:from-neutral-900 dark:to-neutral-950 dark:text-neutral-100">
+
+  <!-- 상단 고정 헤더: 제목 · 탭 3개 · 테마 버튼 -->
+  <header class="sticky top-0 z-30 border-b border-black/5 bg-white/70 backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/70">
+    <div class="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+      <div class="flex min-w-0 items-baseline gap-3">
+        <h1 class="text-lg font-semibold tracking-tight">MeetingNote</h1>
+        <span class="truncate text-xs text-slate-500 dark:text-neutral-400">회의록 자동 정리</span>
+      </div>
+      <nav class="ml-auto flex items-center gap-1 rounded-xl bg-black/5 p-1 dark:bg-white/10" aria-label="화면 전환">
+        <button type="button" data-tab="list" class="tab-btn rounded-lg px-3 py-1.5 text-sm font-medium">목록</button>
+        <button type="button" data-tab="add" class="tab-btn rounded-lg px-3 py-1.5 text-sm font-medium">넣기</button>
+        <button type="button" data-tab="todos" class="tab-btn rounded-lg px-3 py-1.5 text-sm font-medium">할 일</button>
+      </nav>
+      <button type="button" data-role="theme-toggle" class="rounded-full p-2 text-lg leading-none hover:bg-black/5 dark:hover:bg-white/10" aria-label="테마 바꾸기" title="테마 바꾸기">◐</button>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-6xl px-4 py-6">
+    <!-- 화면 1: 목록 -->
+    <section data-view="list">
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-[1fr_11rem_11rem]">
+        <input id="q" type="search" placeholder="제목 또는 참석자로 검색" aria-label="제목 또는 참석자로 검색"
+          class="col-span-2 w-full min-w-0 rounded-xl border border-black/10 bg-white/70 px-4 py-2.5 text-sm shadow-sm outline-none backdrop-blur placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-white/10 dark:bg-neutral-800/60 dark:placeholder:text-neutral-500 sm:col-span-1">
+        <label class="flex min-w-0 items-center gap-2 rounded-xl border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-slate-500 shadow-sm backdrop-blur focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30 dark:border-white/10 dark:bg-neutral-800/60 dark:text-neutral-400">
+          from
+          <input id="from" type="date" class="w-full min-w-0 bg-transparent py-1 text-sm text-slate-800 outline-none dark:text-neutral-100 dark:[color-scheme:dark]">
+        </label>
+        <label class="flex min-w-0 items-center gap-2 rounded-xl border border-black/10 bg-white/70 px-3 py-1.5 text-xs text-slate-500 shadow-sm backdrop-blur focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/30 dark:border-white/10 dark:bg-neutral-800/60 dark:text-neutral-400">
+          to
+          <input id="to" type="date" class="w-full min-w-0 bg-transparent py-1 text-sm text-slate-800 outline-none dark:text-neutral-100 dark:[color-scheme:dark]">
+        </label>
+      </div>
+      <p data-role="list-status" class="mt-4 min-h-[1.25rem] text-sm text-slate-500 dark:text-neutral-400" aria-live="polite"></p>
+      <!-- 카드 2열, 모바일(sm 미만)에서는 1열 -->
+      <div id="cards" class="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2"></div>
+    </section>
+
+    <!-- 화면 2: 넣기 -->
+    <section data-view="add" class="hidden">
+      <div class="space-y-4 rounded-2xl border border-black/5 bg-white/60 p-4 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-neutral-800/50 sm:p-6">
+        <label class="block text-xs font-medium text-slate-500 dark:text-neutral-400">제목
+          <input id="title" type="text" maxlength="200" placeholder="예: 2차 스프린트 회의"
+            class="mt-1 w-full min-w-0 rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-white/10 dark:bg-neutral-900/60 dark:text-neutral-100">
+        </label>
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <label class="block min-w-0 text-xs font-medium text-slate-500 dark:text-neutral-400">일시 (내 컴퓨터 시각)
+            <input id="metAt" type="datetime-local"
+              class="mt-1 w-full min-w-0 rounded-xl border border-black/10 bg-white/80 px-4 py-2 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-white/10 dark:bg-neutral-900/60 dark:text-neutral-100 dark:[color-scheme:dark]">
+          </label>
+          <label class="block min-w-0 text-xs font-medium text-slate-500 dark:text-neutral-400">참석자 (쉼표로 구분)
+            <input id="attendees" type="text" placeholder="예: 김대리, 박과장"
+              class="mt-1 w-full min-w-0 rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-white/10 dark:bg-neutral-900/60 dark:text-neutral-100">
+          </label>
+        </div>
+        <div class="grid grid-cols-1 items-end gap-4 sm:grid-cols-2">
+          <label class="block min-w-0 text-xs font-medium text-slate-500 dark:text-neutral-400">녹취 파일 (mp3 · wav, 25MB 이하)
+            <input id="file" type="file" accept=".mp3,.wav,audio/mpeg,audio/wav"
+              class="mt-1 block w-full min-w-0 rounded-xl border border-black/10 bg-white/80 px-2 py-1.5 text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-200 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-slate-700 dark:border-white/10 dark:bg-neutral-900/60 dark:text-neutral-200 dark:file:bg-neutral-700 dark:file:text-neutral-100">
+          </label>
+          <div class="flex min-w-0 items-center gap-3">
+            <button id="btnUp" type="button"
+              class="shrink-0 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50">받아쓰기</button>
+            <p data-role="upload-status" class="min-w-0 break-words text-sm text-slate-500 dark:text-neutral-400" aria-live="polite"></p>
+          </div>
+        </div>
+        <label class="block text-xs font-medium text-slate-500 dark:text-neutral-400">본문 - 받아쓴 원문 또는 붙여넣은 메모
+          <textarea id="body" rows="8" placeholder="받아쓰기를 누르면 여기에 채워집니다. 메모를 직접 붙여넣어도 됩니다."
+            class="mt-1 w-full min-w-0 resize-y rounded-xl border border-black/10 bg-white/80 px-4 py-3 text-sm leading-relaxed text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-white/10 dark:bg-neutral-900/60 dark:text-neutral-100"></textarea>
+        </label>
+        <div class="flex min-w-0 flex-wrap items-center gap-3">
+          <button id="btnSave" type="button"
+            class="shrink-0 rounded-xl bg-slate-800 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-sky-500 dark:hover:bg-sky-400">정리하기</button>
+          <p data-role="save-status" class="min-w-0 break-words text-sm text-slate-500 dark:text-neutral-400" aria-live="polite"></p>
+        </div>
+      </div>
+      <!-- 결과 세 칸: 요약 · 결정사항 · 할 일 -->
+      <div id="result" class="mt-4"></div>
+    </section>
+
+    <!-- 화면 4: 할 일 -->
+    <section data-view="todos" class="hidden">
+      <p data-role="todo-status" class="mb-3 min-h-[1.25rem] text-sm text-slate-500 dark:text-neutral-400" aria-live="polite"></p>
+      <!-- 좁은 화면에서는 이 상자만 가로 스크롤된다 -->
+      <div class="overflow-x-auto rounded-2xl border border-black/5 bg-white/70 shadow-sm backdrop-blur-xl dark:border-white/10 dark:bg-neutral-800/60">
+        <table class="w-full min-w-[40rem] text-left text-sm">
+          <thead class="bg-slate-800 text-white dark:bg-neutral-700">
+            <tr>
+              <th scope="col" class="px-4 py-3 font-semibold">내용</th>
+              <th scope="col" class="w-32 px-4 py-3 font-semibold">담당자</th>
+              <th scope="col" class="w-40 px-4 py-3 font-semibold">기한</th>
+              <th scope="col" class="w-48 px-4 py-3 font-semibold">회의</th>
+            </tr>
+          </thead>
+          <tbody id="todoBody" class="divide-y divide-black/5 dark:divide-white/10"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- 화면 3: 상세 (가운데 겹침 창). 바깥 어두운 영역을 누르면 닫힌다 -->
+  <div id="modal" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label="회의록 상세">
+    <div class="max-h-full w-full max-w-4xl overflow-y-auto rounded-2xl border border-black/5 bg-white/90 p-5 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-neutral-900/90 sm:p-7">
+      <div class="flex items-start gap-4">
+        <div class="min-w-0 flex-1">
+          <h2 data-role="modal-title" class="break-words text-xl font-semibold tracking-tight"></h2>
+          <p data-role="modal-meta" class="mt-1 break-words text-sm text-slate-500 dark:text-neutral-400"></p>
+        </div>
+        <button type="button" data-role="modal-close" class="shrink-0 rounded-lg px-3 py-1.5 text-sm text-slate-600 hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10">닫기</button>
+      </div>
+      <div data-role="modal-panels" class="mt-5"></div>
+      <details class="mt-4 rounded-xl border border-black/5 bg-black/[0.03] px-4 py-3 dark:border-white/10 dark:bg-white/5">
+        <summary class="cursor-pointer select-none text-sm font-medium text-slate-600 dark:text-neutral-300">받아쓴 본문 보기</summary>
+        <p data-role="modal-body" class="mt-3 whitespace-pre-wrap break-words text-sm leading-relaxed text-slate-700 dark:text-neutral-200"></p>
+      </details>
+      <div class="mt-5 flex flex-col gap-2 sm:flex-row">
+        <input id="mTitle" type="text" maxlength="200" aria-label="제목 수정칸" placeholder="새 제목"
+          class="w-full min-w-0 flex-1 rounded-xl border border-black/10 bg-white/80 px-4 py-2.5 text-sm text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/30 dark:border-white/10 dark:bg-neutral-800/60 dark:text-neutral-100">
+        <div class="flex gap-2">
+          <button type="button" data-role="modal-rename" class="flex-1 rounded-xl bg-slate-800 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-slate-700 disabled:opacity-50 dark:bg-sky-500 dark:hover:bg-sky-400 sm:flex-none">제목 수정</button>
+          <button type="button" data-role="modal-delete" class="flex-1 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-500 disabled:opacity-50 sm:flex-none">삭제</button>
+        </div>
+      </div>
+      <p data-role="modal-status" class="mt-3 min-h-[1.25rem] break-words text-xs text-slate-500 dark:text-neutral-400" aria-live="polite">삭제는 한 번 더 눌러야 지워집니다.</p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
